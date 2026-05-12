@@ -10,3 +10,10 @@
 - https://www.rfc-editor.org/rfc/rfc821
 - https://datatracker.ietf.org/doc/html/rfc9051#name-how-to-read-this-document
 - https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol
+
+#### Testing
+Netcat for testing:
+```bash
+nc -C localhost 8010
+```
+`-C` automatically adds `\r\n` to the end of message
