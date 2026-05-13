@@ -13,7 +13,6 @@ impl Noop<'_> {
         println!("Got NOOP command; Sending 250 OK");
         self.stream.writable().await?;
         let msg = b"250 OK\r\n";
-        self.stream.writable().await?;
         self.stream.try_write(msg)?;
         Ok(())
     }

@@ -1,9 +1,7 @@
-use std::fmt::Display;
-
 use anyhow::anyhow;
 use regex::Regex;
 
-mod commands;
+mod smtp;
 
 pub async fn run() {
     let listener = match tokio::net::TcpListener::bind("0.0.0.0:8010").await {
@@ -19,7 +17,7 @@ pub async fn run() {
         let (socket, addr) = listener.accept().await.unwrap();
         println!("Connection from: {}", addr);
 
-        let _ = match socket.readable().await {
+        match socket.readable().await {
             Ok(_) => {}
             Err(err) => {
                 eprintln!("{err}");
@@ -27,6 +25,7 @@ pub async fn run() {
             }
         };
         tokio::spawn(async move {
+            let mut session = smtp::Session::new();
             loop {
                 let cmd = match read_command(&socket).await {
                     Ok(cmd) => cmd,
@@ -35,7 +34,7 @@ pub async fn run() {
                         break;
                     }
                 };
-                let res = match cmd.do_command(&socket).await {
+                let res = match cmd.do_command(&socket, &mut session).await {
                     Ok(res) => res,
                     Err(err) => {
                         eprintln!("{err}");
@@ -52,56 +51,35 @@ pub async fn run() {
 
 #[allow(unused)]
 #[derive(Debug)]
-struct ParsedSMTP {
-    command: SmtpCommand,
+pub struct ParsedSMTP {
+    command: smtp::SmtpCommand,
     payload: String,
 }
 
-#[derive(Debug)]
-enum SmtpCommand {
-    Quit,
-    Noop,
-    Helo,
-    Unknown,
-}
-
-impl SmtpCommand {
-    fn from_string(cmd_string: String) -> SmtpCommand {
-        match cmd_string.as_str() {
-            "QUIT" => Self::Quit,
-            "NOOP" => Self::Noop,
-            "HELO" => Self::Helo,
-            _ => Self::Unknown,
-        }
-    }
-}
-
-impl Display for SmtpCommand {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Quit => write!(f, "quit command"),
-            Self::Noop => write!(f, "noop command"),
-            Self::Helo => write!(f, "helo command"),
-            Self::Unknown => write!(f, "unknown command"),
-        }
-    }
-}
-
 impl ParsedSMTP {
-    fn new(command: SmtpCommand, payload: String) -> Self {
+    fn new(command: smtp::SmtpCommand, payload: String) -> Self {
         Self { command, payload }
     }
 
-    async fn do_command(&self, stream: &tokio::net::TcpStream) -> Result<bool, anyhow::Error> {
+    async fn do_command(
+        &self,
+        stream: &tokio::net::TcpStream,
+        session: &mut smtp::Session,
+    ) -> Result<bool, anyhow::Error> {
         match self.command {
-            SmtpCommand::Quit => {
-                let quit_cmd = commands::quit::Quit::new(&stream);
+            smtp::SmtpCommand::Quit => {
+                let quit_cmd = smtp::quit::Quit::new(stream);
                 quit_cmd.execute().await?;
                 return Ok(false);
             }
-            SmtpCommand::Noop => {
-                let noop_cmd = commands::noop::Noop::new(&stream);
+            smtp::SmtpCommand::Noop => {
+                let noop_cmd = smtp::noop::Noop::new(stream);
                 noop_cmd.execute().await?;
+            }
+            smtp::SmtpCommand::Helo => {
+                let helo_cmd = smtp::helo::Helo::new(stream, self.payload.clone());
+                helo_cmd.execute(session).await?;
+                println!("{session:?}")
             }
             _ => {
                 println!("command not reconized: {}", self.command);
@@ -150,7 +128,7 @@ async fn read_command(stream: &tokio::net::TcpStream) -> Result<ParsedSMTP, anyh
             continue;
         };
         command = Some(ParsedSMTP::new(
-            SmtpCommand::from_string(matches[1].to_string()),
+            smtp::SmtpCommand::from_string(matches[1].to_string()),
             matches[2].to_string(),
         ));
     }
