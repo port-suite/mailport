@@ -9,9 +9,9 @@ impl Quit<'_> {
 
     pub async fn execute(&self) -> Result<(), anyhow::Error> {
         self.stream.writable().await?;
-        let msg = b"221 Closed\r\n";
-        let n = &self.stream.try_write(msg)?;
-        println!("Wrote {} bytes and closed the stream", n);
+        let msg = b"221 Bye\r\n";
+        let _ = &self.stream.try_write(msg)?;
+        println!("Got QUIT command; Sending 221 Bye");
         Ok(())
     }
 }

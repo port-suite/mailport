@@ -12,8 +12,7 @@
 - https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol
 
 #### Testing
-Netcat for testing:
+Telnet for testing:
 ```bash
-nc -C localhost 8010
+telnet localhost 8010
 ```
-`-C` automatically adds `\r\n` to the end of message
