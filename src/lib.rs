@@ -34,14 +34,14 @@ pub async fn run() {
                         break;
                     }
                 };
-                let res = match cmd.do_command(&socket, &mut session).await {
-                    Ok(res) => res,
+                let should_quit = match cmd.do_command(&socket, &mut session).await {
+                    Ok(res) => !res,
                     Err(err) => {
                         eprintln!("{err}");
                         break;
                     }
                 };
-                if !res {
+                if should_quit {
                     break;
                 }
             }
@@ -49,7 +49,6 @@ pub async fn run() {
     }
 }
 
-#[allow(unused)]
 #[derive(Debug)]
 pub struct ParsedSMTP {
     command: smtp::SmtpCommand,
@@ -80,6 +79,16 @@ impl ParsedSMTP {
                 let helo_cmd = smtp::helo::Helo::new(stream, self.payload.clone());
                 helo_cmd.execute(session).await?;
                 println!("{session:?}")
+            }
+            smtp::SmtpCommand::MailFrom => {
+                let mail_from_cmd = smtp::mail_from::MailFrom::new(stream, self.payload.clone());
+                mail_from_cmd.execute(session).await?;
+                println!("{session:?}")
+            }
+            smtp::SmtpCommand::RcptTo => {
+                let rcpt_to_cmd = smtp::rcpt_to::RcptTo::new(stream, self.payload.clone());
+                rcpt_to_cmd.execute(session).await?;
+                println!("{session:?}");
             }
             _ => {
                 println!("command not reconized: {}", self.command);
@@ -117,10 +126,12 @@ async fn read_command(stream: &tokio::net::TcpStream) -> Result<ParsedSMTP, anyh
     let line: String = String::from_utf8(trimmed_buff.to_vec())?;
     let mut command: Option<ParsedSMTP> = None;
     let possible_commands = vec![
-        "HELO", "EHLO", // "MAIL FROM",
-        // "RCPT TO",
+        "HELO",
+        "MAIL FROM:",
+        "RCPT TO:",
         // "DATA",
-        "QUIT", "NOOP",
+        "QUIT",
+        "NOOP",
     ];
     for cmd in possible_commands {
         let re = Regex::new(format!("({})\\s?(.*)", cmd).as_str()).unwrap();

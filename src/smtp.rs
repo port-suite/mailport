@@ -1,15 +1,18 @@
 use std::fmt::Display;
 
+pub mod data;
 pub mod helo;
+pub mod mail_from;
 pub mod noop;
 pub mod quit;
+pub mod rcpt_to;
 
 #[allow(unused)]
 #[derive(Debug)]
 pub struct Session {
     helo: Option<String>,
-    sender: Option<String>,
-    receivers: Vec<String>,
+    mail_from: Option<String>,
+    rcpt_to: Vec<String>,
     data: Option<String>,
 }
 
@@ -17,8 +20,8 @@ impl Session {
     pub fn new() -> Session {
         Session {
             helo: None,
-            sender: None,
-            receivers: vec![],
+            mail_from: None,
+            rcpt_to: vec![],
             data: None,
         }
     }
@@ -29,6 +32,8 @@ pub enum SmtpCommand {
     Quit,
     Noop,
     Helo,
+    MailFrom,
+    RcptTo,
     Unknown,
 }
 
@@ -38,6 +43,8 @@ impl SmtpCommand {
             "QUIT" => Self::Quit,
             "NOOP" => Self::Noop,
             "HELO" => Self::Helo,
+            "MAIL FROM:" => Self::MailFrom,
+            "RCPT TO:" => Self::RcptTo,
             _ => Self::Unknown,
         }
     }
@@ -49,6 +56,8 @@ impl Display for SmtpCommand {
             Self::Quit => write!(f, "quit command"),
             Self::Noop => write!(f, "noop command"),
             Self::Helo => write!(f, "helo command"),
+            Self::MailFrom => write!(f, "mail from command"),
+            Self::RcptTo => write!(f, "rcpt to command"),
             Self::Unknown => write!(f, "unknown command"),
         }
     }

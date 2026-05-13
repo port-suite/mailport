@@ -13,16 +13,16 @@ impl Helo<'_> {
     }
 
     pub async fn execute(&self, session: &mut smtp::Session) -> Result<(), anyhow::Error> {
-        // Save to session
-        // Send response
+        // TODO: make sure payload is not empty
+        // TODO: check payload validity
         println!(
-            "Got HELO command with payload '{}'; Sending 250 Hello, {}",
-            self.host, self.host
+            "Got HELO command with payload '{}'; Sending 250 OK",
+            self.host
         );
         session.helo = Some(self.host.clone());
         self.stream.writable().await?;
-        let msg_string = format!("250 Hello, {}\r\n", self.host);
-        self.stream.try_write(msg_string.as_bytes())?;
+        let msg = b"250 OK\r\n";
+        self.stream.try_write(msg)?;
         Ok(())
     }
 }
