@@ -1,16 +1,20 @@
+use tokio::{
+    io::{AsyncWriteExt, BufWriter},
+    net::tcp::OwnedWriteHalf,
+};
+
 pub struct Quit<'a> {
-    stream: &'a tokio::net::TcpStream,
+    stream: &'a mut BufWriter<OwnedWriteHalf>,
 }
 
 impl Quit<'_> {
-    pub fn new(stream: &tokio::net::TcpStream) -> Quit<'_> {
+    pub fn new(stream: &mut BufWriter<OwnedWriteHalf>) -> Quit<'_> {
         Quit { stream }
     }
 
-    pub async fn execute(&self) -> Result<(), anyhow::Error> {
-        self.stream.writable().await?;
+    pub async fn execute(&mut self) -> Result<(), anyhow::Error> {
         let msg = b"221 Bye\r\n";
-        let _ = &self.stream.try_write(msg)?;
+        self.stream.write_all(msg).await?;
         println!("Got QUIT command; Sending 221 Bye");
         Ok(())
     }

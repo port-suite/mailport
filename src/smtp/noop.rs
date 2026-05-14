@@ -1,19 +1,22 @@
-use tokio::net::TcpStream;
+use tokio::{
+    io::{AsyncWriteExt, BufWriter},
+    net::tcp::OwnedWriteHalf,
+};
 
 pub struct Noop<'a> {
-    stream: &'a TcpStream,
+    stream: &'a mut BufWriter<OwnedWriteHalf>,
 }
 
 impl Noop<'_> {
-    pub fn new(stream: &TcpStream) -> Noop<'_> {
+    pub fn new(stream: &mut BufWriter<OwnedWriteHalf>) -> Noop<'_> {
         Noop { stream }
     }
 
-    pub async fn execute(&self) -> Result<(), anyhow::Error> {
+    pub async fn execute(&mut self) -> Result<(), anyhow::Error> {
         println!("Got NOOP command; Sending 250 OK");
-        self.stream.writable().await?;
         let msg = b"250 OK\r\n";
-        self.stream.try_write(msg)?;
+        self.stream.write_all(msg).await?;
+        self.stream.flush().await?;
         Ok(())
     }
 }

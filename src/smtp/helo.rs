@@ -1,18 +1,21 @@
-use tokio::net::TcpStream;
+use tokio::{
+    io::{AsyncWriteExt, BufWriter},
+    net::tcp::OwnedWriteHalf,
+};
 
 use crate::smtp;
 
 pub struct Helo<'a> {
-    stream: &'a TcpStream,
+    stream: &'a mut BufWriter<OwnedWriteHalf>,
     host: String,
 }
 
 impl Helo<'_> {
-    pub fn new(stream: &TcpStream, host: String) -> Helo<'_> {
+    pub fn new(stream: &mut BufWriter<OwnedWriteHalf>, host: String) -> Helo<'_> {
         Helo { stream, host }
     }
 
-    pub async fn execute(&self, session: &mut smtp::Session) -> Result<(), anyhow::Error> {
+    pub async fn execute(&mut self, session: &mut smtp::Session) -> Result<(), anyhow::Error> {
         // TODO: make sure payload is not empty
         // TODO: check payload validity
         println!(
@@ -20,9 +23,9 @@ impl Helo<'_> {
             self.host
         );
         session.helo = Some(self.host.clone());
-        self.stream.writable().await?;
         let msg = b"250 OK\r\n";
-        self.stream.try_write(msg)?;
+        self.stream.write_all(msg).await?;
+        self.stream.flush().await?;
         Ok(())
     }
 }

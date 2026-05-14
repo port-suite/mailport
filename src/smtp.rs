@@ -34,6 +34,7 @@ pub enum SmtpCommand {
     Helo,
     MailFrom,
     RcptTo,
+    Data,
     Unknown,
 }
 
@@ -45,6 +46,7 @@ impl SmtpCommand {
             "HELO" => Self::Helo,
             "MAIL FROM:" => Self::MailFrom,
             "RCPT TO:" => Self::RcptTo,
+            "DATA" => Self::Data,
             _ => Self::Unknown,
         }
     }
@@ -58,6 +60,7 @@ impl Display for SmtpCommand {
             Self::Helo => write!(f, "helo command"),
             Self::MailFrom => write!(f, "mail from command"),
             Self::RcptTo => write!(f, "rcpt to command"),
+            Self::Data => write!(f, "data command"),
             Self::Unknown => write!(f, "unknown command"),
         }
     }
